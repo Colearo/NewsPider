@@ -2,5 +2,5 @@
 # http://curl.haxx.se/rfc/cookie_spec.html
 # This is a generated file!  Do not edit.
 
-idas.uestc.edu.cn	FALSE	/	FALSE		JSESSIONID_ids1	0001FxaHNlp6I1WCvuhzj7-bacQ:2QS5DVU0UU
-idas.uestc.edu.cn	FALSE	/authserver	FALSE		route	3b432386b71e29c2457eaf7073b54875
+idas.uestc.edu.cn	FALSE	/	FALSE		JSESSIONID_ids2	0001ruDYXFbBDtapFJiM1oNFQrX:PUECVV2FC
+idas.uestc.edu.cn	FALSE	/authserver	FALSE		route	79410db11950631816595971e536cafe

@@ -28,6 +28,7 @@ print(postdata)
 with opener.open(login_url, postdata) as files:
     print (files.read().decode('utf-8'))
 
+f = open('out_grades.txt', "w")
 grade_url = 'http://eams.uestc.edu.cn/eams/teach/grade/course/person!historyCourseGrade.action?projectType=MAJOR'
 with opener.open(grade_url) as result:
     soup = BeautifulSoup(result, "html.parser")
@@ -42,10 +43,11 @@ with opener.open(grade_url) as result:
     for table in soup.find_all("table", id=True) :
         table_head_tag = table.thead
         for child in table_head_tag.stripped_strings:
-            print(child, end = '|\t')
-        print('\n')
+            print(child, end = '|\t', file = f)
+        print('\n', file = f)
         for child_body in table.tbody.children :
-            print('\n')
+            print('\n', file = f)
             for child_string in child_body.stripped_strings :
-                print(child_string, end = '|\t')
+                print(child_string, end = '|\t', file = f)
     print('\n')
+f.close()
