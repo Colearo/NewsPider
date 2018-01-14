@@ -5,15 +5,17 @@ import re
 import os
 import time
 import random
+import gzip
 from urllib.parse import urljoin
+from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from multiprocessing import Pool
 from block_extractor import block_extractor
 
 class news_hunter:
 
-    def __init__(self):
-        self.start_url = 'http://www.thepaper.cn'
+    def __init__(self, site_url):
+        self.start_url = site_url
         self.filename = 'cookie.txt'
         self.cookie = http.cookiejar.MozillaCookieJar(self.filename)
         self.handler = urllib.request.HTTPCookieProcessor(self.cookie)
@@ -52,30 +54,46 @@ class news_hunter:
             
     def get_item_content(self, soup, path_name):
         self.extractor.reset()
-        content = self.extractor.get_content(soup, path_name)
-        with open(path_name, 'wb') as f:
-            for line in content:
-            # for line in content:
-                f.write(str.encode(line + '\n'))
-        print('Saving one article named ', path_name)
+        content = self.extractor.get_content(soup)
+        if content is not None :
+            with open(path_name, 'wb') as f:
+                for line in content:
+                    f.write(str.encode(line + '\n'))
+            print('Saving one article named ', path_name)
 
     def get_page_items(self, soup):
-        for item in soup.find_all('h2') :
-            item_path = item.find('a', target = '_blank')
-            if not item_path :
-                continue
-            item_url = urljoin(self.start_url, item_path['href'])
-            print(item_url)
-            article_name = item_path.string.strip()
-            with self.opener.open(item_url) as result :
-                soup_article = BeautifulSoup(result, "html.parser")
-                self.get_item_content(soup_article, article_name)
-            time.sleep(random.random() * 4 + 1)
+        links = self.extractor.get_valued_links(soup, 
+        self.start_url.strip())
+        for link in links :
+            try :
+                response = self.opener.open(link) 
+                is_charset_gb = self.extractor.is_charset_gb(
+                        response)
+                if is_charset_gb is True :
+                    soup = BeautifulSoup(response, "html.parser", 
+                    from_encoding = 'gb18030')
+                else :
+                    soup = BeautifulSoup(response, "html.parser")
+                title = self.extractor.get_title(soup)
+                if title is None :
+                    continue
+                print(title[0])
+                # self.get_item_content(soup, title[0])
+            except :
+                print('Bad link: ', link)
+        # time.sleep(random.random() * 4 + 1)
+
+    def get_page(self):
+        # print(self.start_url)
+        with self.opener.open(self.start_url) as files :
+            self.cookie.save(ignore_discard=True, ignore_expires=True)
+            soup = BeautifulSoup(files, "html.parser")
+            self.get_page_items(soup)
 
     def get_list_page(self, page_index):
         url = self.start_url + '/channel_2595' + str(page_index)
         print(url)
-        with self.opener.open(url) as files :
+        with self.opener.open(self.start_url) as files :
             self.cookie.save(ignore_discard=True, ignore_expires=True)
             soup = BeautifulSoup(files, "html.parser")
             self.get_page_items(soup)
@@ -86,16 +104,20 @@ class news_hunter:
             self.get_list_page(i)
             time.sleep(40)
 
-def scheduler(index):
-    hunter = news_hunter()
-    print('Task %d starts running' % index)
+def scheduler(site_url):
+    url = site_url.strip()
+    if not url :
+        return
+    hunter = news_hunter(url)
+    print('Task for %s starts running' % url)
     start = time.time()
-    hunter.get_pages(index, index)
+    hunter.get_page()
     end = time.time()
-    print('Task %s runs %0.2f seconds' % (index, (end - start)))
+    print('Task for %s runs %0.2f seconds' % (url, (end - start)))
 
-p = Pool()
-p.map(scheduler, (i for i in range(4)))
-p.close()
-p.join()
+with open('news_url', 'r') as f :
+    p = Pool()
+    p.map(scheduler, (url for url in f.readlines()))
+    p.close()
+    p.join()
 
