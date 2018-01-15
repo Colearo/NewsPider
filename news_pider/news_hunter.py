@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from multiprocessing import Pool
 from block_extractor import block_extractor
+from selenium_tool import selenium_tool
 
 class news_hunter:
 
@@ -22,6 +23,7 @@ class news_hunter:
         self.opener = urllib.request.build_opener(self.handler)
         self.opener.addheaders = [("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/13.10586")]
         self.extractor = block_extractor()
+        self.web_driver = selenium_tool(self.start_url, True)
 
     def save_img(self, image_url, path_name):
         with urllib.request.urlopen(image_url) as files:
@@ -85,10 +87,11 @@ class news_hunter:
 
     def get_page(self):
         # print(self.start_url)
-        with self.opener.open(self.start_url) as files :
-            self.cookie.save(ignore_discard=True, ignore_expires=True)
-            soup = BeautifulSoup(files, "html.parser")
-            self.get_page_items(soup)
+        # with self.opener.open(self.start_url) as files :
+        files = self.web_driver.load_full() 
+        # self.cookie.save(ignore_discard=True, ignore_expires=True)
+        soup = BeautifulSoup(files, "html.parser")
+        self.get_page_items(soup)
 
     def get_list_page(self, page_index):
         url = self.start_url + '/channel_2595' + str(page_index)

@@ -9,23 +9,26 @@ import re
 REGEXES = {
         'positive_re' : re.compile(r'news|article|center|'
         r'entry|main|pagination|post|text|blog|fix|con|'
-        r'story|headline|_blank', re.I),
+        r'story|headline|newsbox|header|news_li', re.I),
         'negative_re' : re.compile('index|combx|comment|com-|'
         'contact|foot|footer|footnote|masthead|media|meta|'
         'outbrain|promo|related|scroll|shoutbox|sidebar|sponsor|'
-        'shopping|tag|tool|widget|list|javascript|categor|ad|'
-        'video|qzone|twitter|pages|homes', re.I),
+        'shopping|tag|tool|widget|javascript|categor|ad|'
+        'video|qzone|twitter|pages|homes|img', re.I),
         'video_re' : re.compile(r'video|interactive', re.I),
-        'unlikely_re' : re.compile('javascript|index|'
-        'extra|ad-break|ad-banner|list|categor|\bchannel|tag|'
-        '[\?\&]|mailto|photo|column|snapshot|mob', re.I),
-        'likelytag_re' : re.compile(r'h3|h2|li'),
+        'unlikely_link_re' : re.compile(r'javascript|index|'
+        r'extra|ad-break|ad-banner|list|categor|\bchannel|tag|commentid|'
+        r'[\?\&]|mailto|photo|column|snapshot|mob|special|about', re.I),
+        'unlikely_div_re' : re.compile(r'news_photoview|news_special|'
+        r'bx-viewport', re.I), 
+        'unlikely_title_re' : re.compile('视频|问我|图集'),
+        'likelytag_re' : re.compile(r'h3|h2|li|ul'),
         'likelynum_re' : re.compile(r'(\d+)'),
         'host_re' : re.compile(r'\.([a-zA-Z0-9]+)\.(com|cn)'),
         'title_re' : re.compile(r'\_|\||\-'),
         'charset_re' : re.compile(
         r'charset\s*=\s*\"*(\w*gb\w+)\"*\s*', re.I),
-        'madarin_re' : re.compile(r'[0-9a-zA-Z\:\!\：]')
+        'madarin_re' : re.compile(r'[0-9a-zA-Z\:\!\：\(\)《》]')
         }
 
 class block_extractor:
@@ -81,6 +84,10 @@ class block_extractor:
                 str(item['class']))) * 2
             score += len(REGEXES['negative_re'].findall(
                 str(item['class']))) * -4
+            score += len(REGEXES['unlikely_div_re'].findall(
+                str(item['class']))) * -20
+        else :
+            score += -4
 
         if item.has_attr('id'):
             score += len(REGEXES['positive_re'].findall(
@@ -101,16 +108,16 @@ class block_extractor:
             num_occur = len(REGEXES['likelynum_re'].findall(
             str(path))) 
             if num_occur > 0 :
-                score += num_occur * 4 
+                score += num_occur * 1 
             else :
                 score += -8
-            if len(str(item.string).strip()) > 8 :
+            if len(str(item.string).strip()) > 10 :
                 score += 2
             else :
                 score += -2
 
-        score += len(REGEXES['likelytag_re'].findall(
-            str(item.name))) * 5
+        # score += len(REGEXES['likelytag_re'].findall(
+        #     str(item.name))) * 5
 
         return score
 
@@ -127,19 +134,23 @@ class block_extractor:
             if host is None or cur_host is None :
                 continue
             if (REGEXES['video_re'].search(item_path['href']) or 
-            REGEXES['unlikely_re'].search(item_path['href']) or
+            REGEXES['unlikely_link_re'].search(item_path['href']) or
             host.group(1) != cur_host.group(1)) :
                 continue
 
             if item_url not in links :
                 score = self.score_item(item_path)
-                for parent in item_path.find_parents(limit = 2) :
+                for parent in item_path.find_parents('div', limit = 2) :
                     score += self.score_item(parent)
+                for parent in item_path.find_parents('h3', limit = 1) :
+                    score += 2
+                for parent in item_path.find_parents('h2', limit = 1) :
+                    score += 2
                 for child in item_path.find_all('h3') :
-                    score += 3
-                if score > 0 :
+                    score += 2
+                if score > 2 :
                     links.append(item_url)
-                    print(item_url)
+                    
         return links 
 
     def is_charset_gb(self, response):
@@ -158,6 +169,9 @@ class block_extractor:
             return None
         elif len(REGEXES['madarin_re'].sub(
             '',title[0].strip())) < 8 :
+            return None
+        elif REGEXES['unlikely_title_re'].search(
+            title[0].strip()) is not None :
             return None
         else :
             return title 
