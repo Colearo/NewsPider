@@ -9,7 +9,7 @@ from urllib.parse import urlparse,urljoin
 REGEXES = {
         'positive_re' : re.compile(r'news|article|center|'
         r'entry|main|pagination|post|text|blog|fix|con|'
-        r'story|headline|newsbox|header|news_li', re.I),
+        r'story|headline|newsbox|header|news_li|box|news_list', re.I),
         'negative_re' : re.compile('index|combx|comment|com-|'
         'contact|foot|footer|footnote|masthead|media|meta|'
         'outbrain|promo|related|scroll|shoutbox|sidebar|sponsor|'
@@ -17,8 +17,9 @@ REGEXES = {
         'video|qzone|twitter|pages|homes|img', re.I),
         'video_re' : re.compile(r'video|interactive', re.I),
         'unlikely_link_re' : re.compile(r'javascript|index|'
-        r'extra|ad-break|ad-banner|list|categor|\bchannel|tag|commentid|'
-        r'[\?\&]|mailto|photo|column|snapshot|mob|special|about', re.I),
+        r'extra|ad-break|ad-banner|\blist|categor|\bchannel|tag|commentid|'
+        r'[\?\&]|mailto|photo|column|snapshot|mob|special|about|\bcomment',
+        re.I),
         'unlikely_div_re' : re.compile(r'news_photoview|news_special|'
         r'bx-viewport', re.I), 
         'unlikely_title_re' : re.compile('视频|问我|图集'),
@@ -28,7 +29,12 @@ REGEXES = {
         'title_re' : re.compile(r'\_|\||\-'),
         'charset_re' : re.compile(
         r'charset\s*=\s*\"*(\w*gb\w+)\"*\s*', re.I),
-        'madarin_re' : re.compile(r'[0-9a-zA-Z\:\!\：\(\)《》]')
+        'madarin_re' : re.compile(r'[0-9a-zA-Z\:\!\：\(\)《》]'),
+        'ltag_re' : re.compile(r'<[^>]+>', re.S),
+        'rtag_re' : re.compile(r'</[^>]+>', re.S),
+        'tag_br_re' : re.compile(r'<br(/*)>'),
+        'redundancy_re' : re.compile(r'[\s\n\t\r]'),
+        'comment_re' : re.compile(r'<!--.*?-->'),
         }
 
 class extractor:
@@ -39,41 +45,51 @@ class extractor:
     def reset(self):
         self.max_block_len = 0
         self.max_block_len_index = 0
-        self.max_block_surge = float(0.0)
         self.surge_index = 0
         self.min_block_len = float('inf')
-        self.min_block_dive = float('inf')
         self.dive_index = 0
         self.blocks_len = []
 
     def get_surge_dive(self, content) :
-        for i in range(1, len(self.blocks_len) - 2) :
-            cur_block_rate = float(self.blocks_len[i] /
-                    self.blocks_len[i-1])
-            # if (cur_block_rate > self.max_block_surge and 
-            if (self.blocks_len[i] > 170 and 
-            len(content[i]) > 5 and
+        for i in range(len(self.blocks_len) - self.block_width) :
+            if (self.blocks_len[i] > 110 and 
             i <= self.max_block_len_index and 
             self.surge_index == 0) :
-                self.max_block_surge = cur_block_rate
-                self.surge_index = i
-            elif (cur_block_rate < 1 and 
-            i >= self.max_block_len_index and 
-            self.blocks_len[i + 1] < 30 and 
-            self.blocks_len[i + 2] < 30) :
-                self.min_block_dive = cur_block_rate
-                self.dive_index = i - 1 
+                for j in range(self.block_width + 1) :
+                    if self.blocks_len[i + j] == 0 :
+                        self.surge_index = 0
+                    else :
+                        self.surge_index = i
+            elif (i >= self.max_block_len_index and 
+            self.blocks_len[i - 1] < 40 and
+            self.blocks_len[i] == 0 and 
+            self.blocks_len[i + 1] == 0) :
+                self.dive_index = i 
                 break
-        print(self.max_block_surge, ' : ', self.blocks_len[self.surge_index], ' | ', self.min_block_dive, ' : ', self.blocks_len[self.dive_index])
+        print(self.surge_index, ':', self.dive_index)
             
     def sanitize(self, soup):
+        [x.decompose() for x in soup.find_all('script')]
+        [style.decompose() for style in soup.find_all('style')]
+        [img.decompose() for img in soup.find_all('img')]
+        [span.decompose() for span in soup.find_all('span')]
+        [a.extract() for a in soup.find_all('a')]
+        # text = soup.prettify()
+        text = str(soup)
+        text = REGEXES['comment_re'].sub('', text)
+        text = REGEXES['rtag_re'].sub('\n', text)
+        text = REGEXES['ltag_re'].sub('', text)
+        # [span.extract() for span in soup.find_all('span')]
+        # [style.extract() for style in soup.find_all('style')]
+        # [img.extract() for img in soup.find_all('img')]
+        return text
+
+    def sanitize_links(self, soup):
         [x.extract() for x in soup.find_all('script')]
         [span.extract() for span in soup.find_all('span')]
         [style.extract() for style in soup.find_all('style')]
-        return soup
-
-    def sanitize_links(self, soup):
-        [a.extract() for a in soup.find_all('a', href = True)]
+        [img.extract() for img in soup.find_all('img')]
+        # [a.extract() for a in soup.find_all('a', href = True)]
         return soup
 
     def score_item(self, item):
@@ -122,19 +138,16 @@ class extractor:
         return score
 
     def get_valued_links(self, soup, start_url):
-        soup_sanitized = self.sanitize(soup)
+        soup_sanitized = self.sanitize_links(soup)
         links = []
-        for item_path in soup_sanitized.find_all('a', 
-        href = True) :
-            item_url = urljoin(start_url, 
-                    item_path['href'].strip())
-            cur_host = REGEXES['host_re'].search(
-                    item_url)
+        for item_path in soup_sanitized.find_all('a', href = True) :
+            item_url = urljoin(start_url, item_path['href'].strip())
+            cur_host = REGEXES['host_re'].search(item_url)
             host = REGEXES['host_re'].search(start_url)
             if host is None or cur_host is None :
                 continue
-            if (REGEXES['video_re'].search(item_path['href']) or 
-            REGEXES['unlikely_link_re'].search(item_path['href']) or
+            if (REGEXES['video_re'].search(item_url) or 
+            REGEXES['unlikely_link_re'].search(item_url) or
             host.group(1) != cur_host.group(1)) :
                 continue
 
@@ -163,6 +176,9 @@ class extractor:
         return False 
             
     def get_title(self, soup):
+        if soup.head is None :
+            return None
+
         title = REGEXES['title_re'].split(
                 str(soup.head.title.string)) 
         if title is None :
@@ -179,11 +195,12 @@ class extractor:
     def get_content(self, soup):
         self.reset()
         soup_sanitized = self.sanitize(soup)
-        content = str(soup_sanitized.get_text('\%\%', 'br')).split('\%\%')
+        content = str(soup_sanitized).splitlines(True)
         for i in range(len(content) - self.block_width) :
             cur_block_len = 0
             for j in range(self.block_width + 1) :
-                cur_block_len += len(content[i + j].strip())
+                text = REGEXES['redundancy_re'].sub('', content[i + j])
+                cur_block_len += len(text)
             if cur_block_len > self.max_block_len :
                 self.max_block_len = cur_block_len
                 self.max_block_len_index = i
@@ -191,10 +208,9 @@ class extractor:
                 self.min_block_len = cur_block_len
             self.blocks_len.append(cur_block_len)
         
+        print(self.blocks_len)
         self.get_surge_dive(content)
-        if (self.max_block_surge == float(0.0) or
-        self.min_block_dive == float('inf') or
-        self.max_block_len < 120) :
+        if self.max_block_len < 40 :
             return None
         else :
             return content[self.surge_index : self.dive_index]

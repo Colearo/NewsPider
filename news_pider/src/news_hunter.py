@@ -61,10 +61,15 @@ class news_hunter:
         self.extractor.reset()
         content = self.extractor.get_content(soup)
         if content is not None :
-            with open(path_name, 'wb') as f:
+            try :
+                f = open(path_name.strip(), 'wb')
+            except :
+                pass
+            else :
                 for line in content:
-                    f.write(str.encode(line + '\n'))
-            print('Saving one article named ', path_name)
+                    if line.strip() is not '' :
+                        f.write(str.encode(line.strip()) + b'\n')
+            print('Saving one article named ', path_name.strip())
 
     def get_page_items(self, soup):
         links = self.extractor.get_valued_links(soup, 
@@ -79,13 +84,15 @@ class news_hunter:
                     from_encoding = 'gb18030')
                 else :
                     soup = BeautifulSoup(response, "html.parser")
+
                 title = self.extractor.get_title(soup)
                 if title is None :
                     continue
-                print(title[0])
-                # self.get_item_content(soup, title[0])
+                print('%s [%s]' % (title[0], link))
             except :
                 print('Bad link: ', link)
+                continue
+            self.get_item_content(soup, title[0])
         # time.sleep(random.random() * 4 + 1)
 
     def get_page(self):
@@ -121,7 +128,8 @@ def scheduler(site_url):
     end = time.time()
     print('Task for %s runs %0.2f seconds' % (url, (end - start)))
 
-with open('./resource/news_url', 'r') as f :
+news_url = os.path.join(os.path.dirname(__file__), './resource/news_url')
+with open(news_url, 'r') as f :
     p = Pool()
     p.map(scheduler, (url for url in f.readlines()))
     p.close()
