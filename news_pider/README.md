@@ -1,1 +1,1 @@
-# news_hunter -- a simple news crawler
+# news_hunter -- a simple news crawler arch
