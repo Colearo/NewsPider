@@ -25,6 +25,7 @@ class Purifier:
             return WLEnum.WL_PURIFY_SUCC, links
 
     async def purify_page(self, response) :
+        content = dict()
         is_charset_gb = self.extractor.is_charset_gb(response)
         if is_charset_gb is True :
             soup = BeautifulSoup(response, "html.parser", 
@@ -35,8 +36,14 @@ class Purifier:
         title = self.extractor.get_title(soup)
         content_str = ''
         if title is not None :
-            # print('[%s]' % title[0])
-            content = title[0]
+            content['Title'] = title[0]
+            date = self.extractor.get_date(soup)
+            if date is not None :
+                content['Date'] = date
+            source = self.extractor.get_source(soup)
+            if source is not None :
+                content['Source'] = source 
+            # news_content = extractor.get_content(soup)
             # news_content = extractor.get_content(soup)
             # if news_content is not None :
                 # for line in news_content :

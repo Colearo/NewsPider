@@ -35,9 +35,11 @@ REGEXES = {
         'tag_br_re' : re.compile(r'<br(/*)>'),
         'redundancy_re' : re.compile(r'[\s\n\t\r]'),
         'comment_re' : re.compile(r'<!--.*?-->'),
+        'date_re' : re.compile(r'(\d{4})\s*[-/年]\s*(\d{2})[-/月]\s*(\d{2})日?\s?(\d{2}):(\d{2})'), 
+        'source_re' : re.compile(r'["@]?来源：@*([^"@]+)["@]?'),
         }
 
-class extractor:
+class Extractor:
 
     def __init__(self):
         self.block_width = 3
@@ -90,6 +92,14 @@ class extractor:
         [style.extract() for style in soup.find_all('style')]
         [img.extract() for img in soup.find_all('img')]
         # [a.extract() for a in soup.find_all('a', href = True)]
+        return soup
+
+    def sanitize_tags(self, soup):
+        [x.decompose() for x in soup.find_all('script')]
+        [img.decompose() for img in soup.find_all('img')]
+        soup = REGEXES['comment_re'].sub('', str(soup))
+        soup = REGEXES['rtag_re'].sub('@', soup)
+        soup = REGEXES['ltag_re'].sub('@', soup)
         return soup
 
     def score_item(self, item):
@@ -163,7 +173,6 @@ class extractor:
                     score += 2
                 if score > 2 :
                     links.append(item_url)
-                    
         return links 
 
     def is_charset_gb(self, response):
@@ -191,6 +200,20 @@ class extractor:
             return None
         else :
             return title 
+
+    def get_date(self, soup):
+        date = REGEXES['date_re'].search(str(soup))
+        if date is not None :
+            date = (date.group(1) + '/' + date.group(2) + '/' +
+            date.group(3) + ' ' + date.group(4) + ':' + date.group(5))
+        return date
+
+    def get_source(self, soup):
+        soup = self.sanitize_tags(soup)
+        source = REGEXES['source_re'].search(soup)
+        if source is not None :
+            source = source.group(1)
+        return source
 
     def get_content(self, soup):
         self.reset()

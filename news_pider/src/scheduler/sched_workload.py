@@ -5,6 +5,7 @@ import os
 import time
 import traceback
 import asyncio
+import multiprocessing
 from queue import Queue
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, wait
 from hunter.summoner import Summoner
@@ -18,28 +19,32 @@ class Workload:
         self.summoner = Summoner()
         self.purifier = Purifier(start_url)
 
-    async def task_info_hunter(self):
+    async def task_info_hunter(self, stat):
         status, response = await self.summoner.summon(self.start_url, False)
+        stat[status] += 1
         if status is WLEnum.WL_SUMMON_FAIL :
             return
-        status, links = self.purifier.purify(response, False)
+        status, links = await self.purifier.purify(response, False)
+        stat[status] += 1
         if status is WLEnum.WL_PURIFY_FAIL :
             return 
         for link in links :
             status, response = await self.summoner.summon(link, True)
+            stat[status] += 1
             if status is WLEnum.WL_SUMMON_FAIL :
                 continue
             status, content = await self.purifier.purify(response, True)
+            stat[status] += 1
             if status is WLEnum.WL_PURIFY_FAIL :
                 continue
             print(content)
 
-    def run(self):
+    def run(self, status):
         oldloop = asyncio.get_event_loop()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try :
-            loop.run_until_complete(self.task_info_hunter())
+            loop.run_until_complete(self.task_info_hunter(status))
         except Exception:
             traceback.print_exc()
         finally:
@@ -49,9 +54,10 @@ class Workload:
 class Scheduler:
     def __init__(self) :
         self.process_pool = ProcessPoolExecutor()
+        self.manager = multiprocessing.Manager()
         self.future_list = []
         self.finished_list = []
-        self.status = {
+        self.status = self.manager.dict({
                 WLEnum.WL_SUMMON : 0,
                 WLEnum.WL_SUMMON_SUCC : 0,
                 WLEnum.WL_SUMMON_FAIL : 0,
@@ -61,7 +67,7 @@ class Scheduler:
                 WLEnum.WL_SALVAGE : 0,
                 WLEnum.WL_SALVAGE_SUCC : 0,
                 WLEnum.WL_SALVAGE_FAIL : 0
-                }
+                })
         self.start_t = 0
         self.end_t = 0
 
@@ -71,6 +77,8 @@ class Scheduler:
 
     def stop(self) :
         self.process_pool.shutdown(True)
+        print(self.status)
+        self.manager.shutdown()
         self.end_t = time.time()
         print('Scheduler runs %0.2f seconds' % (self.end_t - self.start_t))
 

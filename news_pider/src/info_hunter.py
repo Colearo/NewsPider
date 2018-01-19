@@ -11,9 +11,9 @@ from queue import Queue
 from scheduler.sched_workload import Scheduler, Workload
 from concurrent.futures import ThreadPoolExecutor 
 
-def workload(url):
+def workload(url, status):
     wl = Workload(url)
-    wl.run()
+    wl.run(status)
 
 class InfoHunter:
 
@@ -29,7 +29,7 @@ class InfoHunter:
                 url = url.strip()
                 if url == '' :
                     continue
-                self.sched.submit_workload(workload, url)
+                self.sched.submit_workload(workload, url, self.sched.status)
 
     def run(self):
         self.sched.start()
