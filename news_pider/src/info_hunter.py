@@ -6,36 +6,36 @@ import os
 import time
 import random
 import sys
-from scheduler.sched_workload import Scheduler, WLEnum 
-from scheduler.sched_summoner import Summoner 
+import asyncio
+from queue import Queue
+from scheduler.sched_workload import Scheduler, Workload
+from concurrent.futures import ThreadPoolExecutor 
+
+def workload(url):
+    wl = Workload(url)
+    wl.run()
 
 class InfoHunter:
 
     def __init__(self, urls_path):
         self.sched = Scheduler()
         self.urls_path = urls_path
+        self.new_urls = Queue()
+        self.quit = False
 
-    def url_summon(self):
+    def start_url_add(self):
         with open(self.urls_path, 'r') as f :
             for url in f.readlines() :
                 url = url.strip()
-                if not url :
+                if url == '' :
                     continue
-                summoner = Summoner(self.sched, url, True)
-                summoner.submit()
+                self.sched.submit_workload(workload, url)
 
     def run(self):
         self.sched.start()
-        self.url_summon()
-        while True :
-            self.sched.update_workload_status()
-            if len(self.sched.summon_list) == 0 :
-                break
-            (soup, flag) = self.sched.summon_list.pop()
-            print(soup.head.title)
+        self.start_url_add()
         self.sched.stop()
         
-
 sites_path = os.path.join(os.path.dirname(__file__), './resource/news_url')
 hunter = InfoHunter(sites_path)
 hunter.run()

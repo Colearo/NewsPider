@@ -3,44 +3,65 @@
 
 import os
 import time
-from enum import Enum
+import traceback
+import asyncio
+from queue import Queue
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, wait
-
-class WLEnum(Enum) :
-    WL_RUNNING = 'wl_running'
-    WL_COMPLETED = 'wl_completed'
-
-    WL_SALVAGE = 'wl_salvage'
-    WL_SALVAGE_SUCC = 'wl_salvage_succ'
-    WL_SALVAGE_FAIL = 'wl_salvage_fail'
-
-    WL_SUMMON = 'wl_summon'
-    WL_SUMMON_SUCC = 'wl_summon_succ'
-    WL_SUMMON_FAIL = 'wl_summon_fail'
-
-    WL_PURIFY = 'wl_purify'
-    WL_PURIFY_SUCC = 'wl_purify_succ'
-    WL_PURIFY_FAIL = 'wl_purify_fail'
+from hunter.summoner import Summoner
+from hunter.purifier import Purifier
+from .sched_status import WLEnum
 
 class Workload:
-    def __init__(self, scheduler) :
-        self.scheduler = scheduler
 
-    def submit(self) :
-        return NotImplementedError
+    def __init__(self, start_url) :
+        self.start_url = start_url
+        self.summoner = Summoner()
+        self.purifier = Purifier(start_url)
 
-    def finish(self) :
-        return NotImplementedError
+    async def task_info_hunter(self):
+        status, response = await self.summoner.summon(self.start_url, False)
+        if status is WLEnum.WL_SUMMON_FAIL :
+            return
+        status, links = self.purifier.purify(response, False)
+        if status is WLEnum.WL_PURIFY_FAIL :
+            return 
+        for link in links :
+            status, response = await self.summoner.summon(link, True)
+            if status is WLEnum.WL_SUMMON_FAIL :
+                continue
+            status, content = await self.purifier.purify(response, True)
+            if status is WLEnum.WL_PURIFY_FAIL :
+                continue
+            print(content)
+
+    def run(self):
+        oldloop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try :
+            loop.run_until_complete(self.task_info_hunter())
+        except Exception:
+            traceback.print_exc()
+        finally:
+            loop.close()
+            asyncio.set_event_loop(oldloop)
 
 class Scheduler:
     def __init__(self) :
-        self.thread_pool = ThreadPoolExecutor()
         self.process_pool = ProcessPoolExecutor()
         self.future_list = []
         self.finished_list = []
-        self.summon_list = []
-        self.purify_list = []
-        self.salvage_list = []
+        self.status = {
+                WLEnum.WL_SUMMON : 0,
+                WLEnum.WL_SUMMON_SUCC : 0,
+                WLEnum.WL_SUMMON_FAIL : 0,
+                WLEnum.WL_PURIFY : 0,
+                WLEnum.WL_PURIFY_SUCC : 0,
+                WLEnum.WL_PURIFY_FAIL : 0,
+                WLEnum.WL_SALVAGE : 0,
+                WLEnum.WL_SALVAGE_SUCC : 0,
+                WLEnum.WL_SALVAGE_FAIL : 0
+                }
         self.start_t = 0
         self.end_t = 0
 
@@ -49,42 +70,25 @@ class Scheduler:
         print('Scheduler starts running')
 
     def stop(self) :
-        self.thread_pool.shutdown(True)
         self.process_pool.shutdown(True)
         self.end_t = time.time()
         print('Scheduler runs %0.2f seconds' % (self.end_t - self.start_t))
 
+    def submit_workload(self, func, *args) :
+        future = self.process_pool.submit(func, *args)
+        self.future_list.append(future)
 
-    def submit_workload(self, func, flag) :
-        if flag is WLEnum.WL_SUMMON or flag is WLEnum.WL_SALVAGE :
-            future = self.thread_pool.submit(func)
-            self.future_list.append(future)
-        elif flag is WLEnum.WL_PURIFY :
-            future = self.process_pool.submit(func)
-            self.future_list.append(future)
-
-    def update_workload_status(self, when = 'FIRST_COMPLETED') :
-            (done, notdone) = wait(self.future_list, return_when = when)
+    def update_workload_status(self, when = 'FIRST_COMPLETED', 
+            time = None) :
+            (done, notdone) = wait(self.future_list, timeout = time, 
+                    return_when = when)
             self.future_list = list(notdone)
             for future in done :
                 try:
-                    flag, data = future.result()
-                except Exception as exc:
-                    print('Generated an exception: %s' %  exc)
+                    flag = future.result()
+                except Exception:
+                    traceback.print_exc()
                 else:
-                    if flag is WLEnum.WL_SUMMON :
-                        self.summon_list.append(data)
-                    elif flag is WLEnum.WL_PURIFY :
-                        self.purify_list.append(data)
-                    elif flag is WLEnum.WL_SALVAGE :
-                        self.salvage_list.append(data)
                     self.finished_list.append(future)
-
-
-
-
-
-
-
 
 
