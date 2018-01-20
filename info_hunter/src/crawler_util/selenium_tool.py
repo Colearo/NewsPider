@@ -43,6 +43,7 @@ class Drivertool:
                     break
             asyncio.sleep(0.1)
         text = self.driver.page_source
-        self.driver.close()
         return text
 
+    def stop(self):
+        self.driver.close()

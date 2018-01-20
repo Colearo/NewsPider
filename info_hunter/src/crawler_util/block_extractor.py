@@ -71,6 +71,7 @@ class Extractor:
         print(self.surge_index, ':', self.dive_index)
             
     def sanitize(self, soup):
+        [x.clear() for x in soup.find_all('script')]
         [x.decompose() for x in soup.find_all('script')]
         [style.decompose() for style in soup.find_all('style')]
         [img.decompose() for img in soup.find_all('img')]
@@ -231,7 +232,7 @@ class Extractor:
                 self.min_block_len = cur_block_len
             self.blocks_len.append(cur_block_len)
         
-        print(self.blocks_len)
+        # print(self.blocks_len)
         self.get_surge_dive(content)
         if self.max_block_len < 40 :
             return None

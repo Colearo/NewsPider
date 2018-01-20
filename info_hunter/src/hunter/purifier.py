@@ -43,13 +43,12 @@ class Purifier:
             source = self.extractor.get_source(soup)
             if source is not None :
                 content['Source'] = source 
-            # news_content = extractor.get_content(soup)
-            # news_content = extractor.get_content(soup)
-            # if news_content is not None :
-                # for line in news_content :
-                    # if line.strip() is not '' :
-                        # content_str = content_str + line.strip() + '\n'
-                # content['Content'] = content_str
+            news_content = self.extractor.get_content(soup)
+            if news_content is not None :
+                for line in news_content :
+                    if line.strip() is not '' :
+                        content_str = content_str + line.strip() + '\n'
+                content['Content'] = content_str
             return WLEnum.WL_PURIFY_SUCC, content
         return WLEnum.WL_PURIFY_FAIL, None
 

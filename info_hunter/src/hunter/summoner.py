@@ -11,7 +11,6 @@ from crawler_util.selenium_tool import Drivertool
 class Summoner:
 
     def __init__(self) :
-        self.web_driver = Drivertool(True)
         self.cookie_name = 'cookie.txt'
         self.cookie = http.cookiejar.MozillaCookieJar(self.cookie_name)
         self.handler = urllib.request.HTTPCookieProcessor(self.cookie)
@@ -29,7 +28,9 @@ class Summoner:
             return WLEnum.WL_SUMMON_SUCC, response
 
     async def summon_start_page(self, url) :
-        response = self.web_driver.load_full(url) 
+        web_driver = Drivertool(True)
+        response = web_driver.load_full(url) 
+        web_driver.stop()
         if response is None :
             return WLEnum.WL_SUMMON_FAIL, None
         else :
