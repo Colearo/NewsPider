@@ -12,7 +12,7 @@ class Salvager:
         self.table_name = table_name
         self.redis = redis.Redis(host = 'localhost', port = 6379)
 
-    async def salvage(self, content) :
+    def salvage(self, content) :
         try :
             self.redis.sadd(self.table_name, content)
         except :

@@ -7,7 +7,7 @@ import traceback
 import asyncio
 import selenium.webdriver.chrome.service as driver_service
 from queue import Queue
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, wait
+from concurrent.futures import ProcessPoolExecutor, wait
 from hunter.summoner import Summoner
 from hunter.purifier import Purifier
 from hunter.salvager import Salvager
@@ -15,9 +15,9 @@ from .sched_status import WLEnum
 
 class Workload:
 
-    def __init__(self, start_url, service_url) :
+    def __init__(self, start_url) :
         self.start_url = start_url
-        self.summoner = Summoner(service_url)
+        self.summoner = Summoner()
         self.purifier = Purifier(start_url)
         self.salvager = Salvager()
         self.stat = dict({
@@ -32,8 +32,8 @@ class Workload:
                 WLEnum.WL_SALVAGE_FAIL : 0
                 })
 
-    async def task_info_hunter(self):
-        status, response = await self.summoner.summon(self.start_url, False)
+    def task_info_hunter(self):
+        status, response = self.summoner.summon(self.start_url, False)
         self.stat[status] += 1
         if status is WLEnum.WL_SUMMON_FAIL :
             return
@@ -42,30 +42,31 @@ class Workload:
         if status is WLEnum.WL_PURIFY_FAIL :
             return 
         for link in links :
-            status, response = await self.summoner.summon(link, True)
+            status, response = self.summoner.summon(link, True)
             self.stat[status] += 1
             if status is WLEnum.WL_SUMMON_FAIL :
                 continue
-            # status, content = await self.purifier.purify(response, True)
-            # self.stat[status] += 1
-            # if status is WLEnum.WL_PURIFY_FAIL :
-                # continue
-            # content['Link'] = link
-            # status = await self.salvager.salvage(content)
-            # stat[status] += 1
-            # print(content)
+            status, content = self.purifier.purify(response, True)
+            self.stat[status] += 1
+            if status is WLEnum.WL_PURIFY_FAIL :
+                continue
+            content['Link'] = link
+            status = self.salvager.salvage(content)
+            self.stat[status] += 1
+            print(content)
 
     def run(self):
-        oldloop = asyncio.get_event_loop()
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try :
-            loop.run_until_complete(self.task_info_hunter())
-        except Exception:
-            traceback.print_exc()
-        finally:
-            loop.close()
-            asyncio.set_event_loop(oldloop)
+        # oldloop = asyncio.get_event_loop()
+        # loop = asyncio.new_event_loop()
+        # asyncio.set_event_loop(loop)
+        # try :
+            # loop.run_until_complete(self.task_info_hunter())
+        # except Exception:
+            # traceback.print_exc()
+        # finally:
+            # loop.close()
+            # asyncio.set_event_loop(oldloop)
+        self.task_info_hunter()
 
 class Scheduler:
     def __init__(self) :
@@ -83,39 +84,19 @@ class Scheduler:
                 WLEnum.WL_SALVAGE_SUCC : 0,
                 WLEnum.WL_SALVAGE_FAIL : 0
                 })
+        self.process_pool = ProcessPoolExecutor()
 
     def start(self) :
-        self.process_pool = ProcessPoolExecutor(max_workers = 10)
-        self.service = driver_service.Service(
-                '/usr/local/bin/chromedriver')
-        self.service.start()
-        self.service_url = self.service.service_url
         self.start_t = time.time()
         print(' ')
         print('***********************')
         print('Scheduler starts running')
 
-    def reset(self) :
-        self.future_list = set()
-
     def stop(self, timeout = 400) :
         self.update_workload_status(time = timeout)
-        self.reset()
-        self.process_pool.shutdown(False)
         print(self.status)
         self.end_t = time.time()
         print('Scheduler runs %0.2f seconds' % (self.end_t - self.start_t))
-
-    def wait(self) :
-        now = time.time()
-        duration = now - self.end_t
-        mins = int(duration/60)
-        secs = int(duration)
-        if secs != 0 and secs == mins * 60 :
-            secs = 0
-        else :
-            secs = secs - mins * 60
-        print('\rScheduler wait [%d min %d sec]' % (mins, secs), end = '')
 
     def submit_workload(self, func, *args) :
         future = self.process_pool.submit(func, *args)

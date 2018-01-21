@@ -10,23 +10,21 @@ import asyncio
 load_more_xpath = '//div[contains(@class, \'loader-bd\') or contains(@class, \'load-more\') or @class=\'more\']'
 
 class Drivertool:
-    def __init__(self, service_url, is_headless = False):
-        self.options = webdriver.ChromeOptions()
+    def __init__(self, is_headless = False):
+        options = webdriver.ChromeOptions()
         if is_headless is True :
-            self.options.add_argument('--headless')
-            self.options.add_argument('--disable-gpu')
-        self.service_url = service_url
+            options.add_argument('--headless')
+            options.add_argument('--disable-gpu')
+        self.driver = webdriver.Chrome(chrome_options = options)
 
     def load_full(self, url, scroll_times = 7):
-        self.driver = webdriver.Remote(self.service_url, 
-                self.options.to_capabilities())
         try :
             self.driver.get(url)
         except Exception as exc :
             traceback.print_exc()
             return None
         else :
-            time.sleep(1)
+            time.sleep(3)
             last_height = 0
             for i in range(scroll_times):
                 self.driver.execute_script('window.scrollTo'
@@ -45,8 +43,8 @@ class Drivertool:
                     except :
                         print('Now has been to bottom')
                         break
-                time.sleep(0.1)
-        text = self.driver.page_source
-        self.driver.quit()
-        return text
+                asyncio.sleep(0.1)
+            text = self.driver.page_source
+            self.driver.quit()
+            return text
 

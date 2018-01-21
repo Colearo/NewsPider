@@ -10,17 +10,17 @@ from crawler_util.selenium_tool import Drivertool
 
 class Summoner:
 
-    def __init__(self, service_url) :
+    def __init__(self) :
         self.cookie_name = 'cookie.txt'
         self.cookie = http.cookiejar.MozillaCookieJar(self.cookie_name)
         self.handler = urllib.request.HTTPCookieProcessor(self.cookie)
         self.opener = urllib.request.build_opener(self.handler)
         self.opener.addheaders = [("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/13.10586"), ("Connection", "keep-alive")]
-        self.web_driver = Drivertool(service_url, True)
+        self.web_driver = Drivertool(True)
 
-    async def summon_page(self, url) : 
+    def summon_page(self, url) : 
         try :
-            response = self.opener.open(url)
+            response = self.opener.open(url, timeout = 20)
         except Exception as exc:
             print('Bad link: %s | %s' % (url, exc))
             return WLEnum.WL_SUMMON_FAIL, None
@@ -35,9 +35,9 @@ class Summoner:
         else :
             return WLEnum.WL_SUMMON_SUCC, response
 
-    async def summon(self, url, is_content_page) :
+    def summon(self, url, is_content_page) :
         if is_content_page is True:
-            return await self.summon_page(url)
+            return self.summon_page(url)
         else :
             return self.summon_start_page(url)
 
