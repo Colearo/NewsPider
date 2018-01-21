@@ -5,7 +5,7 @@ import os
 import time
 import traceback
 import asyncio
-import multiprocessing
+import selenium.webdriver.chrome.service as driver_service
 from queue import Queue
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, wait
 from hunter.summoner import Summoner
@@ -15,57 +15,12 @@ from .sched_status import WLEnum
 
 class Workload:
 
-    def __init__(self, start_url) :
+    def __init__(self, start_url, service_url) :
         self.start_url = start_url
-        self.summoner = Summoner()
+        self.summoner = Summoner(service_url)
         self.purifier = Purifier(start_url)
         self.salvager = Salvager()
-
-    async def task_info_hunter(self, stat):
-        status, response = await self.summoner.summon(self.start_url, False)
-        stat[status] += 1
-        if status is WLEnum.WL_SUMMON_FAIL :
-            return
-        status, links = await self.purifier.purify(response, False)
-        stat[status] += 1
-        if status is WLEnum.WL_PURIFY_FAIL :
-            return 
-        for link in links :
-            status, response = await self.summoner.summon(link, True)
-            stat[status] += 1
-            if status is WLEnum.WL_SUMMON_FAIL :
-                continue
-            status, content = await self.purifier.purify(response, True)
-            stat[status] += 1
-            if status is WLEnum.WL_PURIFY_FAIL :
-                continue
-            content['Link'] = link
-            await self.salvager.salvage(content)
-            print(content)
-
-    def run(self, status):
-        oldloop = asyncio.get_event_loop()
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try :
-            loop.run_until_complete(self.task_info_hunter(status))
-        except Exception:
-            traceback.print_exc()
-        finally:
-            loop.close()
-            asyncio.set_event_loop(oldloop)
-
-class Scheduler:
-    def __init__(self) :
-        self.future_list = []
-        self.finished_list = []
-        self.start_t = 0
-        self.end_t = 0
-
-    def start(self) :
-        self.process_pool = ProcessPoolExecutor()
-        self.manager = multiprocessing.Manager()
-        self.status = self.manager.dict({
+        self.stat = dict({
                 WLEnum.WL_SUMMON : 0,
                 WLEnum.WL_SUMMON_SUCC : 0,
                 WLEnum.WL_SUMMON_FAIL : 0,
@@ -76,18 +31,78 @@ class Scheduler:
                 WLEnum.WL_SALVAGE_SUCC : 0,
                 WLEnum.WL_SALVAGE_FAIL : 0
                 })
+
+    async def task_info_hunter(self):
+        status, response = await self.summoner.summon(self.start_url, False)
+        self.stat[status] += 1
+        if status is WLEnum.WL_SUMMON_FAIL :
+            return
+        status, links = self.purifier.purify(response, False)
+        self.stat[status] += 1
+        if status is WLEnum.WL_PURIFY_FAIL :
+            return 
+        for link in links :
+            status, response = await self.summoner.summon(link, True)
+            self.stat[status] += 1
+            if status is WLEnum.WL_SUMMON_FAIL :
+                continue
+            # status, content = await self.purifier.purify(response, True)
+            # self.stat[status] += 1
+            # if status is WLEnum.WL_PURIFY_FAIL :
+                # continue
+            # content['Link'] = link
+            # status = await self.salvager.salvage(content)
+            # stat[status] += 1
+            # print(content)
+
+    def run(self):
+        oldloop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try :
+            loop.run_until_complete(self.task_info_hunter())
+        except Exception:
+            traceback.print_exc()
+        finally:
+            loop.close()
+            asyncio.set_event_loop(oldloop)
+
+class Scheduler:
+    def __init__(self) :
+        self.future_list = set()
+        self.start_t = 0
+        self.end_t = 0
+        self.status = dict({
+                WLEnum.WL_SUMMON : 0,
+                WLEnum.WL_SUMMON_SUCC : 0,
+                WLEnum.WL_SUMMON_FAIL : 0,
+                WLEnum.WL_PURIFY : 0,
+                WLEnum.WL_PURIFY_SUCC : 0,
+                WLEnum.WL_PURIFY_FAIL : 0,
+                WLEnum.WL_SALVAGE : 0,
+                WLEnum.WL_SALVAGE_SUCC : 0,
+                WLEnum.WL_SALVAGE_FAIL : 0
+                })
+
+    def start(self) :
+        self.process_pool = ProcessPoolExecutor(max_workers = 10)
+        self.service = driver_service.Service(
+                '/usr/local/bin/chromedriver')
+        self.service.start()
+        self.service_url = self.service.service_url
         self.start_t = time.time()
+        print(' ')
+        print('***********************')
         print('Scheduler starts running')
 
     def reset(self) :
-        self.future_list = []
-        self.finished_list = []
+        self.future_list = set()
 
-    def stop(self) :
-        self.update_workload_status(time = 500)
+    def stop(self, timeout = 400) :
+        self.update_workload_status(time = timeout)
+        self.reset()
         self.process_pool.shutdown(False)
         print(self.status)
-        self.manager.shutdown()
         self.end_t = time.time()
         print('Scheduler runs %0.2f seconds' % (self.end_t - self.start_t))
 
@@ -104,19 +119,19 @@ class Scheduler:
 
     def submit_workload(self, func, *args) :
         future = self.process_pool.submit(func, *args)
-        self.future_list.append(future)
+        self.future_list.add(future)
 
     def update_workload_status(self, when = 'ALL_COMPLETED', 
             time = None) :
             (done, notdone) = wait(self.future_list, timeout = time, 
                     return_when = when)
-            self.future_list = list(notdone)
             for future in done :
                 try:
-                    flag = future.result()
+                    stat = future.result()
                 except Exception:
                     traceback.print_exc()
                 else:
-                    self.finished_list.append(future)
-
+                    if stat is not None :
+                        for enum in WLEnum :
+                            self.status[enum] += stat[enum]
 

@@ -10,12 +10,13 @@ from crawler_util.selenium_tool import Drivertool
 
 class Summoner:
 
-    def __init__(self) :
+    def __init__(self, service_url) :
         self.cookie_name = 'cookie.txt'
         self.cookie = http.cookiejar.MozillaCookieJar(self.cookie_name)
         self.handler = urllib.request.HTTPCookieProcessor(self.cookie)
         self.opener = urllib.request.build_opener(self.handler)
-        self.opener.addheaders = [("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/13.10586")]
+        self.opener.addheaders = [("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/13.10586"), ("Connection", "keep-alive")]
+        self.web_driver = Drivertool(service_url, True)
 
     async def summon_page(self, url) : 
         try :
@@ -27,10 +28,8 @@ class Summoner:
             print('Open link: ', url)
             return WLEnum.WL_SUMMON_SUCC, response
 
-    async def summon_start_page(self, url) :
-        web_driver = Drivertool(True)
-        response = web_driver.load_full(url) 
-        web_driver.stop()
+    def summon_start_page(self, url) :
+        response = self.web_driver.load_full(url) 
         if response is None :
             return WLEnum.WL_SUMMON_FAIL, None
         else :
@@ -40,6 +39,6 @@ class Summoner:
         if is_content_page is True:
             return await self.summon_page(url)
         else :
-            return await self.summon_start_page(url)
+            return self.summon_start_page(url)
 
 

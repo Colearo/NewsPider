@@ -35,8 +35,14 @@ REGEXES = {
         'tag_br_re' : re.compile(r'<br(/*)>'),
         'redundancy_re' : re.compile(r'[\s\n\t\r]'),
         'comment_re' : re.compile(r'<!--.*?-->'),
-        'date_re' : re.compile(r'(\d{4})\s*[-/年]\s*(\d{2})[-/月]\s*(\d{2})日?\s?(\d{2}):(\d{2})'), 
-        'source_re' : re.compile(r'["@]?来源：@*([^"@]+)["@]?'),
+        'date_re' : re.compile(
+            r'(\d{4})\s*[-/年]\s*(\d{2})[-/月]\s*(\d{2})日?\s?(\d{2}):(\d{2})'), 
+        'source_re' : re.compile(r'["@\s]+来源：@*([^"@]+)["@]?'),
+        'redundant_tag' : ['script', 'style', 'var', 'cite', 'code', 
+            'img', 'span', 'figure', 'h3'], 
+        'ab_comment_re' : re.compile(r'<!--\[if !IE\]>.*?<!\[endif\]-->', 
+            re.M|re.S),
+        'nextline_re' : re.compile(r'[\n\t\r]', re.M),
         }
 
 class Extractor:
@@ -55,8 +61,7 @@ class Extractor:
     def get_surge_dive(self, content) :
         for i in range(len(self.blocks_len) - self.block_width) :
             if (self.blocks_len[i] > 110 and 
-            i <= self.max_block_len_index and 
-            self.surge_index == 0) :
+            i <= self.max_block_len_index and self.surge_index == 0) :
                 for j in range(self.block_width + 1) :
                     if self.blocks_len[i + j] == 0 :
                         self.surge_index = 0
@@ -68,18 +73,21 @@ class Extractor:
             self.blocks_len[i + 1] == 0) :
                 self.dive_index = i 
                 break
-        print(self.surge_index, ':', self.dive_index)
+        # print(self.surge_index, ':', self.dive_index)
             
     def sanitize(self, soup):
-        [x.clear() for x in soup.find_all('script')]
-        [x.decompose() for x in soup.find_all('script')]
-        [style.decompose() for style in soup.find_all('style')]
-        [img.decompose() for img in soup.find_all('img')]
-        [span.decompose() for span in soup.find_all('span')]
-        [a.extract() for a in soup.find_all('a')]
+        s_soup = REGEXES['nextline_re'].sub('', str(soup))
+        s_soup = BeautifulSoup(s_soup, "html.parser")
+        for tag in REGEXES['redundant_tag'] :
+            [x.decompose() for x in s_soup.find_all(tag)]
+        [a.extract() for a in s_soup.find_all('a')]
+        # [span.decompose() for span in soup.find_all('span')]
+        # [a.extract() for a in soup.find_all('a')]
         # text = soup.prettify()
-        text = str(soup)
+        text = str(s_soup)
+        text = REGEXES['nextline_re'].sub('', text)
         text = REGEXES['comment_re'].sub('', text)
+        text = REGEXES['ab_comment_re'].sub('', text)
         text = REGEXES['rtag_re'].sub('\n', text)
         text = REGEXES['ltag_re'].sub('', text)
         # [span.extract() for span in soup.find_all('span')]

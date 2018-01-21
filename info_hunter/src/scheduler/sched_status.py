@@ -4,8 +4,6 @@
 from enum import Enum
 
 class WLEnum(Enum) :
-    WL_RUNNING = 'wl_running'
-    WL_COMPLETED = 'wl_completed'
 
     WL_SALVAGE = 'wl_salvage'
     WL_SALVAGE_SUCC = 'wl_salvage_succ'

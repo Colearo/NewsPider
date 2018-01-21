@@ -24,7 +24,7 @@ class Purifier:
         else :
             return WLEnum.WL_PURIFY_SUCC, links
 
-    async def purify_page(self, response) :
+    def purify_page(self, response) :
         content = dict()
         is_charset_gb = self.extractor.is_charset_gb(response)
         if is_charset_gb is True :
@@ -52,9 +52,9 @@ class Purifier:
             return WLEnum.WL_PURIFY_SUCC, content
         return WLEnum.WL_PURIFY_FAIL, None
 
-    async def purify(self, response, is_content_page) :
+    def purify(self, response, is_content_page) :
         if is_content_page is True:
-            return await self.purify_page(response)
+            return self.purify_page(response)
         else :
             return self.purify_links(response)
 
