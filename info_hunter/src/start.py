@@ -32,6 +32,7 @@ def sched_hunter(wait_t):
     _process = Process(target = main_hunter, args = ())
     _process.start()
     _process.join()
+    _process.terminate()
     wait_hunter(time.time(), wait_t)
     timer.enter(wait_t, 1, sched_hunter, (wait_t, ))
     timer.run()
