@@ -5,6 +5,7 @@ import sched
 import time
 import os
 from info_hunter import InfoHunter
+from multiprocessing import Process
 
 timer = sched.scheduler(time.time, time.sleep)
 
@@ -22,10 +23,15 @@ def wait_hunter(end_t, wait_t):
         print('\rScheduler wait [%d min %d sec]' % (mins, secs), end = '')
         timer.enter(1, 2, wait_hunter, (end_t, wait_t))
 
-def sched_hunter(wait_t):
+def main_hunter():
     sites_path = os.path.join(os.path.dirname(__file__), './resource/news_url')
     hunter = InfoHunter(sites_path)
     hunter.run()
+
+def sched_hunter(wait_t):
+    _process = Process(target = main_hunter, args = ())
+    _process.start()
+    _process.join()
     wait_hunter(time.time(), wait_t)
     timer.enter(wait_t, 1, sched_hunter, (wait_t, ))
     timer.run()
