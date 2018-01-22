@@ -15,7 +15,7 @@ from .sched_status import WLEnum
 
 class Workload:
 
-    def __init__(self, start_url, web_driver) :
+    def __init__(self, start_url) :
         self.start_url = start_url
         self.summoner = Summoner()
         self.purifier = Purifier(start_url)
