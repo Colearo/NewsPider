@@ -36,5 +36,6 @@ def sched_hunter(wait_t):
     wait_hunter(time.time(), wait_t)
     timer.enter(wait_t, 1, sched_hunter, (wait_t, ))
     timer.run()
- 
-sched_hunter(1200)
+
+if __name__ == '__main__' :
+    sched_hunter(1200)
