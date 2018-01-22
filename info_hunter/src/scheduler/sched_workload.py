@@ -8,10 +8,13 @@ import asyncio
 import selenium.webdriver.chrome.service as driver_service
 from queue import Queue
 from concurrent.futures import ThreadPoolExecutor, wait
+from threading import Semaphore
 from hunter.summoner import Summoner
 from hunter.purifier import Purifier
 from hunter.salvager import Salvager
 from .sched_status import WLEnum
+
+t_sem = Semaphore(2)
 
 class Workload:
 
@@ -33,7 +36,9 @@ class Workload:
                 })
 
     def task_info_hunter(self):
+        t_sem.acquire()
         status, response = self.summoner.summon(self.start_url, False)
+        t_sem.release()
         self.stat[status] += 1
         if status is WLEnum.WL_SUMMON_FAIL :
             return
@@ -84,7 +89,7 @@ class Scheduler:
                 WLEnum.WL_SALVAGE_SUCC : 0,
                 WLEnum.WL_SALVAGE_FAIL : 0
                 })
-        self.thread_pool = ThreadPoolExecutor()
+        self.thread_pool = ThreadPoolExecutor(max_workers = 5)
 
     def start(self) :
         self.start_t = time.time()
@@ -106,6 +111,9 @@ class Scheduler:
             time = None) :
             (done, notdone) = wait(self.future_list, timeout = time, 
                     return_when = when)
+            for future in notdone:
+                future.cancel()
+
             for future in done :
                 try:
                     stat = future.result()

@@ -12,6 +12,7 @@ load_more_xpath = '//div[contains(@class, \'loader-bd\') or contains(@class, \'l
 class Drivertool:
     def __init__(self, is_headless = False):
         self.options = webdriver.ChromeOptions()
+        self.options.add_argument('--no-sandbox')
         if is_headless is True :
             self.options.add_argument('--headless')
             self.options.add_argument('--disable-gpu')
