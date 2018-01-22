@@ -16,7 +16,7 @@ class Summoner:
         self.handler = urllib.request.HTTPCookieProcessor(self.cookie)
         self.opener = urllib.request.build_opener(self.handler)
         self.opener.addheaders = [("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/13.10586"), ("Connection", "keep-alive")]
-        self.web_driver = Drivertool(True)
+        self.web_driver = Drivertool(True, False)
 
     def summon_page(self, url) : 
         try :
