@@ -87,7 +87,7 @@ class Scheduler:
                 WLEnum.WL_SALVAGE_SUCC : 0,
                 WLEnum.WL_SALVAGE_FAIL : 0
                 })
-        self.thread_pool = ThreadPoolExecutor(max_workers = 10)
+        self.thread_pool = ThreadPoolExecutor(max_workers = 30)
 
     def start(self) :
         self.start_t = time.time()
