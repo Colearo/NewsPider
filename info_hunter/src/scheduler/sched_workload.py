@@ -5,8 +5,6 @@ import os
 import time
 import traceback
 import asyncio
-import selenium.webdriver.chrome.service as driver_service
-from queue import Queue
 from concurrent.futures import ThreadPoolExecutor, wait
 from threading import Semaphore
 from hunter.summoner import Summoner
@@ -89,7 +87,7 @@ class Scheduler:
                 WLEnum.WL_SALVAGE_SUCC : 0,
                 WLEnum.WL_SALVAGE_FAIL : 0
                 })
-        self.thread_pool = ThreadPoolExecutor(max_workers = 5)
+        self.thread_pool = ThreadPoolExecutor(max_workers = 10)
 
     def start(self) :
         self.start_t = time.time()
@@ -97,7 +95,7 @@ class Scheduler:
         print('***********************')
         print('Scheduler starts running')
 
-    def stop(self, timeout = 400) :
+    def stop(self, timeout) :
         self.update_workload_status(time = timeout)
         print(self.status)
         self.end_t = time.time()

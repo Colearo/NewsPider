@@ -19,12 +19,14 @@ class Drivertool:
 
     def load_full(self, url, scroll_times = 7):
         driver = webdriver.Chrome(chrome_options = self.options)
+        driver.set_page_load_timeout(30)
+        driver.set_script_timeout(30)
+        driver.implicitly_wait(30)
         try :
             driver.get(url)
         except Exception as exc :
             traceback.print_exc()
-            return None
-        else :
+        finally :
             time.sleep(3)
             last_height = 0
             for i in range(scroll_times):

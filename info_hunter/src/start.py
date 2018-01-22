@@ -30,4 +30,4 @@ def sched_hunter(wait_t):
     timer.enter(wait_t, 1, sched_hunter, (wait_t, ))
     timer.run()
  
-sched_hunter(3600)
+sched_hunter(1200)
