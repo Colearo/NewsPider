@@ -7,7 +7,7 @@ import traceback
 import asyncio
 import selenium.webdriver.chrome.service as driver_service
 from queue import Queue
-from concurrent.futures import ProcessPoolExecutor, wait
+from concurrent.futures import ThreadPoolExecutor, wait
 from hunter.summoner import Summoner
 from hunter.purifier import Purifier
 from hunter.salvager import Salvager
@@ -15,7 +15,7 @@ from .sched_status import WLEnum
 
 class Workload:
 
-    def __init__(self, start_url) :
+    def __init__(self, start_url, web_driver) :
         self.start_url = start_url
         self.summoner = Summoner()
         self.purifier = Purifier(start_url)
@@ -84,7 +84,7 @@ class Scheduler:
                 WLEnum.WL_SALVAGE_SUCC : 0,
                 WLEnum.WL_SALVAGE_FAIL : 0
                 })
-        self.process_pool = ProcessPoolExecutor()
+        self.thread_pool = ThreadPoolExecutor()
 
     def start(self) :
         self.start_t = time.time()
@@ -99,7 +99,7 @@ class Scheduler:
         print('Scheduler runs %0.2f seconds' % (self.end_t - self.start_t))
 
     def submit_workload(self, func, *args) :
-        future = self.process_pool.submit(func, *args)
+        future = self.thread_pool.submit(func, *args)
         self.future_list.add(future)
 
     def update_workload_status(self, when = 'ALL_COMPLETED', 
