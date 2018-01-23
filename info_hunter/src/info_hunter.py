@@ -25,5 +25,5 @@ class InfoHunter:
     def run(self):
         self.sched.start()
         self.start_url_add()
-        self.sched.stop(1000)
+        self.sched.stop(1800)
 

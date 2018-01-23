@@ -3,6 +3,8 @@
 
 import urllib.request
 import http.cookiejar
+import random
+import sleep
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from scheduler.sched_status import WLEnum 
@@ -19,6 +21,7 @@ class Summoner:
         self.web_driver = Drivertool(True, False)
 
     def summon_page(self, url) : 
+        time.sleep(random.random() * 2 + 1)
         try :
             response = self.opener.open(url, timeout = 20)
         except Exception as exc:

@@ -109,6 +109,7 @@ class Scheduler:
             time = None) :
             (done, notdone) = wait(self.future_list, timeout = time, 
                     return_when = when)
+
             for future in notdone:
                 future.cancel()
 
