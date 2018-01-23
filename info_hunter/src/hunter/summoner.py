@@ -4,7 +4,7 @@
 import urllib.request
 import http.cookiejar
 import random
-import sleep
+import time
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from scheduler.sched_status import WLEnum 
