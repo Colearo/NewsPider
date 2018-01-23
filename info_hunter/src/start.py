@@ -38,4 +38,4 @@ def sched_hunter(wait_t):
     timer.run()
 
 if __name__ == '__main__' :
-    sched_hunter(1200)
+    sched_hunter(3600)
