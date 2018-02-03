@@ -49,7 +49,10 @@ class Purifier:
                     if line.strip() is not '' :
                         content_str = content_str + line.strip() + '\n'
                 content['Content'] = content_str
+                if content_str.strip() == '' :
+                    return WLEnum.WL_PURIFY_FAIL, None
             return WLEnum.WL_PURIFY_SUCC, content
+
         return WLEnum.WL_PURIFY_FAIL, None
 
     def purify(self, response, is_content_page) :
