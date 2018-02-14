@@ -35,7 +35,7 @@ class Workload:
 
     def task_info_hunter(self):
         t_sem.acquire()
-        status, response = self.summoner.summon(self.start_url, False)
+        status, response = self.summoner.summon(self.start_url, True)
         t_sem.release()
         self.stat[status] += 1
         if status is WLEnum.WL_SUMMON_FAIL :
