@@ -27,8 +27,7 @@ REGEXES = {
         'likelynum_re' : re.compile(r'(\d+)'),
         'host_re' : re.compile(r'\.([a-zA-Z0-9]+)\.(com|cn)'),
         'title_re' : re.compile(r'\_|\||\-'),
-        'charset_re' : re.compile(
-        r'charset\s*=\s*\"*(\w*gb\w+)\"*\s*', re.I),
+        'charset_re' : re.compile(r'charset=(gb[a-zA-Z0-9]+)', re.I),
         'madarin_re' : re.compile(r'[0-9a-zA-Z\:\!\：\(\)《》]'),
         'ltag_re' : re.compile(r'<[^>]+>', re.S),
         'rtag_re' : re.compile(r'</[^>]+>', re.S),
@@ -185,13 +184,12 @@ class Extractor:
         return links 
 
     def is_charset_gb(self, response):
-        content_type = response.info().get('Content-Type')
-        if content_type is not None :
-            charset = REGEXES['charset_re'].search(content_type)
-            if charset is not None :
-                return True
+        bs = response.read()
+        charset = REGEXES['charset_re'].search(str(bs[0: 2048]))
+        if charset is not None :
+            return bs.decode('gb18030')
 
-        return False 
+        return bs
             
     def get_title(self, soup):
         if soup.head is None :

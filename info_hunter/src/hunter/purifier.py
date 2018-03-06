@@ -26,12 +26,8 @@ class Purifier:
 
     def purify_page(self, response) :
         content = dict()
-        is_charset_gb = self.extractor.is_charset_gb(response)
-        if is_charset_gb is True :
-            soup = BeautifulSoup(response, "html.parser", 
-                    from_encoding = 'gb18030')
-        else :
-            soup = BeautifulSoup(response, "html.parser")
+        response = self.extractor.is_charset_gb(response)
+        soup = BeautifulSoup(response, "html.parser")
 
         title = self.extractor.get_title(soup)
         content_str = ''

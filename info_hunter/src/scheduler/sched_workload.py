@@ -12,7 +12,7 @@ from hunter.purifier import Purifier
 from hunter.salvager import Salvager
 from .sched_status import WLEnum
 
-t_sem = Semaphore(2)
+t_sem = Semaphore(5)
 
 class Workload:
 
@@ -54,8 +54,8 @@ class Workload:
             if status is WLEnum.WL_PURIFY_FAIL :
                 continue
             content['Link'] = link
-            status = self.salvager.salvage(content)
-            self.stat[status] += 1
+            # status = self.salvager.salvage(content)
+            # self.stat[status] += 1
             print(content)
 
     def run(self):
