@@ -54,9 +54,9 @@ class Workload:
             if status is WLEnum.WL_PURIFY_FAIL :
                 continue
             content['Link'] = link
-            # status = self.salvager.salvage(content)
-            # self.stat[status] += 1
-            print(content)
+            status = self.salvager.salvage(content)
+            self.stat[status] += 1
+            print(content['Title'])
 
     def run(self):
         # oldloop = asyncio.get_event_loop()
