@@ -59,22 +59,12 @@ class Workload:
             print(content['Title'])
 
     def run(self):
-        # oldloop = asyncio.get_event_loop()
-        # loop = asyncio.new_event_loop()
-        # asyncio.set_event_loop(loop)
-        # try :
-            # loop.run_until_complete(self.task_info_hunter())
-        # except Exception:
-            # traceback.print_exc()
-        # finally:
-            # loop.close()
-            # asyncio.set_event_loop(oldloop)
         self.task_info_hunter()
+        self.salvager.stop()
 
 class Scheduler:
     def __init__(self) :
         self.future_list = set()
-        self.salvager = Salvager()
         self.start_t = 0
         self.end_t = 0
         self.status = dict({
@@ -98,7 +88,6 @@ class Scheduler:
 
     def stop(self, timeout) :
         self.update_workload_status(time = timeout)
-        self.salvager.rem_repeat()
         print(self.status)
         self.end_t = time.time()
         print('Scheduler runs %0.2f seconds' % (self.end_t - self.start_t))
