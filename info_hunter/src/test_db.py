@@ -35,7 +35,10 @@ for i in r.sscan_iter("news_content") :
     except mysql.connector.Error as err :
         print(err.msg)
     except Exception as e :
-        print(e)
+        print(e, '[', d.get('Link'), ']')
+        cnx.rollback()
+    else :
+        print('OK')
 
 cursor.close()
 cnx.close()
