@@ -12,8 +12,8 @@ cursor = cnx.cursor()
 r = redis.Redis(host = 'localhost', port = 6379, decode_responses = True, password = "lemonHUHUHE")
 
 insert_new_news = (
-        "INSERT IGNORE INTO news "
-        "(news_title, news_date, news_content, news_source)"
+        "INSERT INTO news "
+        "(news_title, news_date, news_content, news_source, news_link)"
         "VALUES (%s, %s, %s, %s)"
         )
 
@@ -27,15 +27,14 @@ for i in r.sscan_iter("news_content") :
         continue
     date = datetime.datetime.strptime(date, '%Y/%m/%d %H:%M')
     date = date.strftime('%Y-%m-%d %H:%M:%S')
-    d_tuple = (d.get('Title'), date, content, d.get('Source')) 
+    d_tuple = (d.get('Title'), date, content, d.get('Source'), d.get('Link')) 
     try :
-        print('Insert news %s' % d.get('Title'), end = '')
+        print('Insert news %s ' % d.get('Title'), end = '')
         cursor.execute(insert_new_news, d_tuple)
         cnx.commit()
     except mysql.connector.Error as err :
-        print(err)
+        print(err.msg)
 
 cursor.close()
 cnx.close()
-r.close()
 
