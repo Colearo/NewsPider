@@ -12,7 +12,7 @@ cursor = cnx.cursor()
 r = redis.Redis(host = 'localhost', port = 6379, decode_responses = True, password = "lemonHUHUHE")
 
 insert_new_news = (
-        "INSERT INTO news "
+        "INSERT IGNORE INTO news "
         "(news_title, news_date, news_content, news_source, news_link)"
         "VALUES (%s, %s, %s, %s, %s)"
         )
