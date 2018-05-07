@@ -56,7 +56,6 @@ class Workload:
             content['Link'] = link
             status = self.salvager.salvage(content)
             self.stat[status] += 1
-            print(content['Title'])
 
     def run(self):
         self.task_info_hunter()

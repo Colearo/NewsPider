@@ -34,14 +34,14 @@ class Salvager:
         d_tuple = (d.get('Title'), date, content, d.get('Source'), d.get('Link')) 
         try :
             print('Insert news %s' % d.get('Title'), end = '')
-            cursor.execute(insert_new_news, d_tuple)
-            cnx.commit()
+            self.cursor.execute(insert_new_news, d_tuple)
+            self.cnx.commit()
         except mysql.connector.Error as err :
             print(err.msg)
             return WLEnum.WL_SALVAGE_FAIL
         except Exception as e :
             print(e, '[', d.get('Link'), ']')
-            cnx.rollback()
+            self.cnx.rollback()
             return WLEnum.WL_SALVAGE_FAIL
         else :
             print('OK')
