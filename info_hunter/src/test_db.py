@@ -34,6 +34,8 @@ for i in r.sscan_iter("news_content") :
         cnx.commit()
     except mysql.connector.Error as err :
         print(err.msg)
+    except Exception as e :
+        print(e)
 
 cursor.close()
 cnx.close()
