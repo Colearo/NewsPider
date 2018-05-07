@@ -14,7 +14,7 @@ r = redis.Redis(host = 'localhost', port = 6379, decode_responses = True, passwo
 insert_new_news = (
         "INSERT INTO news "
         "(news_title, news_date, news_content, news_source, news_link)"
-        "VALUES (%s, %s, %s, %s)"
+        "VALUES (%s, %s, %s, %s, %s)"
         )
 
 for i in r.sscan_iter("news_content") :
