@@ -8,7 +8,7 @@ import redis
 
 DB_NAME = 'db_news'
 cnx = mysql.connector.connect(user = 'root', password = 'lemon', database = DB_NAME)
-cursor = conn.cursor()
+cursor = cnx.cursor()
 r = redis.Redis(host = 'localhost', port = 6379, decode_responses = True, password = "lemonHUHUHE")
 
 insert_new_news = (
