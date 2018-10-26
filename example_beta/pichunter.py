@@ -16,7 +16,7 @@ re_num = re.compile(r'第\s*(\d+)张')
 class pic_hunter:
 
     def __init__(self):
-        self.start_url = 'https://www.aitaotu.com/guonei/'
+        self.start_url = ''
         self.filename = 'cookie.txt'
         self.cookie = http.cookiejar.MozillaCookieJar(self.filename)
         self.handler = urllib.request.HTTPCookieProcessor(self.cookie)
@@ -99,7 +99,7 @@ def scheduler(index):
     print('Task %s runs %0.2f seconds' % (index, (end - start)))
 
 p = Pool()
-p.map(scheduler, (i + 35 for i in range(4)))
+p.map(scheduler, (i + 5 for i in range(40)))
 p.close()
 p.join()
 
